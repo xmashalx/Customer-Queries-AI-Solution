@@ -1,0 +1,9 @@
+ipykernel
+pydantic
+pandas
+openpyxl
+openai
+python-dotenv
+pytest
+pylint
+streamlit
