@@ -1,5 +1,6 @@
 """Streamlit app for analyzing customer support interactions using the SupportAnalysis model."""
 
+
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -28,61 +29,63 @@ def run_analysis(query: str) -> SupportAnalysis:
 
 
 def main():
-    st.title("Customer Support Interaction Analysis")
+    st.set_page_config(
+        page_title="Paysafe Support Assistant", layout="centered")
 
-    st.subheader("Enter an excel file containing customer support queries:")
-    uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx"])
+    st.title("Paysafe Support Assistant")
 
-    if uploaded_file is not None:
-        queries_df = pd.read_excel(uploaded_file)
-        st.write("Queries loaded:")
+    st.markdown("Enter a customer message below to analyse.")
 
-        # Assuming the Excel file has a column named 'TEXT' containing the queries
-        if 'TEXT' not in queries_df.columns:
-            st.error(
-                "The uploaded Excel file must contain a 'TEXT' column with the queries.")
+    user_input = st.text_area(
+        "Customer Message",
+        height=150,
+        placeholder="Paste or type the customer query here..."
+    )
+
+    if st.button("Analyse"):
+
+        if not user_input.strip():
+            st.warning("Please enter a customer message.")
             return
 
-        # allow user to select a query by id assuming there is an ID column in the loaded dataframe
-        if 'ID' not in queries_df.columns:
-            st.error(
-                "The uploaded Excel file must contain an 'ID' column with the query IDs.")
-            return
-        else:
-            query_id = st.selectbox("Select a query ID", queries_df['ID'])
+        with st.spinner("Analysing message..."):
+            try:
+                analysis = run_analysis(user_input)
+            except Exception as e:
+                st.error(f"Analysis failed: {e}")
+                return
 
-            if query_id is not None:
-                query_text = queries_df.loc[queries_df['ID']
-                                            == query_id, 'TEXT'].values[0]
-                st.write(f"Selected Query: {query_text}")
+        st.divider()
 
-                if st.button("Run Analysis"):
-                    with st.spinner("Analyzing..."):
-                        analysis_result = run_analysis(query_text)
-                    st.success("Analysis complete!")
+        # --- Compact Classification ---
+        st.subheader("Classification")
 
-                    # Display the analysis result in a structured format
-                    # if the requires manual review is true, show a warning and request that a human review the result
-                    # if the requires escalation is true, show a warning and recommend escalation to a supervisor
-                    # display in a box the primary intent colon sub intent and in a box next to it the key information
-                    # do the same for the secondary intent and sub intent if they exist
-                    # display the next steps as a list of actions to take
-                    st.subheader("Analysis Result:")
-                    if analysis_result.manual_review_required:
-                        st.warning(
-                            "Low confidence score - manual review required")
-                    if analysis_result.escalation_required:
-                        st.warning("High risk level - escalation recommended")
-                    st.write(
-                        f"Primary Intent: {analysis_result.primary_intent} - {analysis_result.primary_sub_intent}")
-                    st.write(
-                        f"Key Information: {', '.join(analysis_result.key_information)}")
-                    if analysis_result.secondary_intent:
-                        st.write(
-                            f"Secondary Intent: {analysis_result.secondary_intent} - {analysis_result.secondary_sub_intent}")
-                    st.write("Suggested Next Steps:")
-                    for step in analysis_result.suggested_next_steps:
-                        st.write(f"- {step}")
+        with st.container(border=True):
+            st.markdown(f"### {analysis.primary_intent.value}")
+            st.markdown(f"**Sub-Intent:** {analysis.primary_sub_intent.value}")
+
+            if analysis.secondary_intent:
+                st.markdown("---")
+                st.markdown(f"Secondary: {analysis.secondary_intent.value}")
+                st.markdown(f"Sub: {analysis.secondary_sub_intent.value}")
+
+        # --- Expandable Details ---
+        with st.expander("Key Information"):
+            for item in analysis.key_information:
+                st.write(f"• {item}")
+
+        with st.expander("Suggested Next Steps"):
+            for step in analysis.suggested_next_steps:
+                st.write(f"• {step}")
+
+        with st.expander("Risk & Confidence"):
+            st.progress(float(analysis.confidence_score))
+
+            if analysis.manual_review_required:
+                st.warning("Manual review required")
+
+            if analysis.escalation_required:
+                st.error("Escalation recommended")
 
 
 if __name__ == "__main__":
