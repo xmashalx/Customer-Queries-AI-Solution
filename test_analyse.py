@@ -16,11 +16,14 @@ def test_analyse_query(monkeypatch):
     def mock_create(*args, **kwargs):
         return MockResponse()
 
-    monkeypatch.setattr(
-        "analyse.client.chat.completions.create",
-        mock_create
+    mock_client = types.SimpleNamespace(
+        chat=types.SimpleNamespace(
+            completions=types.SimpleNamespace(
+                create=mock_create
+            )
+        )
     )
 
-    result = analyse_query("Test message")
+    result = analyse_query("Test message", client=mock_client)
 
     assert result == '{"mock": "response"}'
