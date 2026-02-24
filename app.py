@@ -30,9 +30,9 @@ def run_analysis(query: str) -> SupportAnalysis:
 
 def main():
     st.set_page_config(
-        page_title="Paysafe Support Assistant", layout="centered")
+        page_title="Customer Enquiries Support Assistant", layout="centered")
 
-    st.title("Paysafe Support Assistant")
+    st.title("Customer Enquiries Support Assistant")
 
     st.markdown("Enter a customer message below to analyse.")
 
@@ -57,17 +57,26 @@ def main():
 
         st.divider()
 
-        # --- Compact Classification ---
-        st.subheader("Classification")
+        st.markdown("### Analysis Summary")
 
-        with st.container(border=True):
+        st.progress(float(analysis.confidence_score))
+
+        if analysis.manual_review_required:
+            st.warning("Manual review required")
+
+        if analysis.escalation_required:
+            st.warning("Escalation recommended")
+
+        with st.container(border=False):
+            st.markdown("## Intent")
             st.markdown(f"### {analysis.primary_intent.value}")
             st.markdown(f"**Sub-Intent:** {analysis.primary_sub_intent.value}")
 
             if analysis.secondary_intent:
-                st.markdown("---")
-                st.markdown(f"Secondary: {analysis.secondary_intent.value}")
-                st.markdown(f"Sub: {analysis.secondary_sub_intent.value}")
+                st.markdown("## Secondary Intent")
+                st.markdown(f"### {analysis.secondary_intent.value}")
+                st.markdown(
+                    f"**Sub-Intent:** {analysis.secondary_sub_intent.value}")
 
         # --- Expandable Details ---
         with st.expander("Key Information"):
@@ -77,15 +86,6 @@ def main():
         with st.expander("Suggested Next Steps"):
             for step in analysis.suggested_next_steps:
                 st.write(f"• {step}")
-
-        with st.expander("Risk & Confidence"):
-            st.progress(float(analysis.confidence_score))
-
-            if analysis.manual_review_required:
-                st.warning("Manual review required")
-
-            if analysis.escalation_required:
-                st.error("Escalation recommended")
 
 
 if __name__ == "__main__":
