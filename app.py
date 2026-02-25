@@ -9,6 +9,7 @@ from models import SupportAnalysis, PrimaryIntent, SubIntent
 from analyse import analyse_query
 from validate import valid_json, parse_response, apply_risk_overrides, adjust_confidence
 import streamlit as st
+import json
 
 
 def run_analysis(query: str) -> SupportAnalysis:
@@ -57,26 +58,38 @@ def main():
 
         st.divider()
 
-        st.markdown("### Analysis Summary")
+        st.download_button(
+            label="Download Analysis JSON",
+            data=json.dumps(analysis.model_dump(), indent=2),
+            file_name="analysis.json",
+            mime="application/json"
+        )
 
+        st.markdown("# Analysis Summary")
+
+        st.markdown('#### Confidence Score')
         st.progress(float(analysis.confidence_score))
 
         if analysis.manual_review_required:
             st.warning("Manual review required")
 
+        st.markdown(f"#### Risk Level: {analysis.risk_level.value}")
         if analysis.escalation_required:
             st.warning("Escalation recommended")
 
         with st.container(border=False):
-            st.markdown("## Intent")
-            st.markdown(f"### {analysis.primary_intent.value}")
-            st.markdown(f"**Sub-Intent:** {analysis.primary_sub_intent.value}")
+            st.markdown("### Intent")
+            st.markdown(f"#### {analysis.primary_intent.value}")
+            if analysis.primary_sub_intent and analysis.primary_sub_intent != SubIntent.NULL:
+                st.markdown(
+                    f"**Sub-Intent:** {analysis.primary_sub_intent.value}")
 
             if analysis.secondary_intent:
-                st.markdown("## Secondary Intent")
-                st.markdown(f"### {analysis.secondary_intent.value}")
-                st.markdown(
-                    f"**Sub-Intent:** {analysis.secondary_sub_intent.value}")
+                st.markdown("### Secondary Intent")
+                st.markdown(f"#### {analysis.secondary_intent.value}")
+                if analysis.secondary_sub_intent and analysis.secondary_sub_intent != SubIntent.NULL:
+                    st.markdown(
+                        f"**Sub-Intent:** {analysis.secondary_sub_intent.value}")
 
         # --- Expandable Details ---
         with st.expander("Key Information"):
